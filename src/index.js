@@ -4,18 +4,20 @@ import {GraphQLServer} from 'graphql-yoga'
 // Type definitions (schema)
 const typeDefs = `
   type Query {
+    add(a: Float!, b: Float!): Float!
+    greeting(name: String): String!
     user: User!
     post: Post!
   }
 
-  type User{
+  type User {
     id: ID!
     name: String!
     email: String!
     age: Int
   }
 
-  type Post{
+  type Post {
     id: ID!
     title: String!
     content: String!
@@ -26,6 +28,15 @@ const typeDefs = `
 // Resolvers
 const resolvers = {
   Query: {
+    add(parent, args, ctx, info ){
+      return args.a + args.b
+    },
+    greeting(parent, args, ctx, info){
+      if(args.name)
+        return `Hello, ${args.name}!`
+      else
+        return 'Hello... someone!'
+    },
     user(){
       return {
         id: '1',
@@ -50,5 +61,5 @@ const server = new GraphQLServer({
 });
 
 server.start(() => {
-  console.log('Ready to serve.')
+  console.log('Ready to serve! o7')
 })
