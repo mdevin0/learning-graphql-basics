@@ -1,13 +1,45 @@
 import {GraphQLServer} from 'graphql-yoga'
 
+// Demo data
+const users = [{
+  id: '1',
+  name: 'Me',
+  email: 'me@here.com',
+  age: 30
+},{
+  id: '2',
+  name: 'You',
+  email: 'you@here.com',
+  age: 45
+},{
+  id: '3',
+  name: 'Us',
+  email: 'us@here.com',
+}]
+const posts = [{
+  id: '1',
+  title: 'Amazingly amazing',
+  content: 'This post is amazing!',
+  published: true
+},{
+  id: '2',
+  title: 'Spider-man',
+  content: 'The amazing Spider-Man!',
+  published: false
+},{
+  id: '3',
+  title: 'No idea',
+  content: 'I ran out of ideas.',
+  published: true
+}]
 
 // Type definitions (schema)
 const typeDefs = `
   type Query {
-    add(a: Float!, b: Float!): Float!
-    greeting(name: String): String!
     user: User!
+    users(query: String): [User]!
     post: Post!
+    posts(query: String): [Post]!
   }
 
   type User {
@@ -28,20 +60,20 @@ const typeDefs = `
 // Resolvers
 const resolvers = {
   Query: {
-    add(parent, args, ctx, info ){
-      return args.a + args.b
-    },
-    greeting(parent, args, ctx, info){
-      if(args.name)
-        return `Hello, ${args.name}!`
-      else
-        return 'Hello... someone!'
-    },
     user(){
       return {
         id: '1',
         name: 'Root',
         email: 'root@linux.com'
+      }
+    },
+    users(parent, args, context, info){
+      if(!args.query){
+        return users
+      } else {
+        return users.filter((user) => {
+          return user.name.toLowerCase().includes(args.query.toLowerCase())
+        })
       }
     },
     post(){
@@ -51,6 +83,17 @@ const resolvers = {
         content: 'Just add the word "sudo" before it',
         published: true
       }
+    },
+    posts(parent, args, context, info){
+      if(!args.query){
+        return posts
+      }
+
+      return posts.filter((post) => {
+        return post.title.toLowerCase().includes(args.query.toLowerCase()) 
+            || post.content.toLowerCase().includes(args.query.toLowerCase())
+      })
+
     }
   } // Query
 } // resolvers
