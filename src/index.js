@@ -16,22 +16,49 @@ const users = [{
   name: 'Us',
   email: 'us@here.com',
 }]
+
 const posts = [{
   id: '1',
   title: 'Amazingly amazing',
   content: 'This post is amazing!',
-  published: true
+  isPublished: true,
+  author: '1'
 },{
   id: '2',
   title: 'Spider-man',
   content: 'The amazing Spider-Man!',
-  published: false
+  isPublished: false,
+  author: '1'
 },{
   id: '3',
   title: 'No idea',
   content: 'I ran out of ideas.',
-  published: true
+  isPublished: true,
+  author: '2'
 }]
+
+const comments = [{
+  id: '1',
+  text: 'This is a comment!',
+  author: '1',
+  post: '1'
+},{
+  id: '2',
+  text: 'This is another comment!',
+  author: '1',
+  post: '3'
+},{
+  id: '3',
+  text: 'This is one more comment!',
+  author: '2',
+  post: '1'
+},{
+  id: '4',
+  text: 'Last comment!',
+  author: '3',
+  post: '2'
+}]
+
 
 // Type definitions (schema)
 const typeDefs = `
@@ -40,6 +67,7 @@ const typeDefs = `
     users(query: String): [User]!
     post: Post!
     posts(query: String): [Post]!
+    comments: [Comment]!
   }
 
   type User {
@@ -47,13 +75,24 @@ const typeDefs = `
     name: String!
     email: String!
     age: Int
+    posts: [Post]!
+    comments: [Comment]!
   }
 
   type Post {
     id: ID!
     title: String!
     content: String!
-    published: Boolean!
+    isPublished: Boolean!
+    author: User!
+    comments: [Comment]!
+  }
+
+  type Comment {
+    id: ID!
+    text: String!
+    author: User!
+    post: Post!
   }
 `
 
@@ -67,7 +106,7 @@ const resolvers = {
         email: 'root@linux.com'
       }
     },
-    users(parent, args, context, info){
+    users(parent, args, ctx, info){
       if(!args.query){
         return users
       } else {
@@ -84,7 +123,7 @@ const resolvers = {
         published: true
       }
     },
-    posts(parent, args, context, info){
+    posts(parent, args, ctx, info){
       if(!args.query){
         return posts
       }
@@ -94,8 +133,38 @@ const resolvers = {
             || post.content.toLowerCase().includes(args.query.toLowerCase())
       })
 
+    },
+    comments(parent, args, ctx, info){
+      return comments
     }
-  } // Query
+  }, // Query
+
+  User: {
+    posts(parent, args, ctx, info){
+      return posts.filter((post) => post.author === parent.id)
+    },
+    comments(parent, args, ctx, info){
+      return comments.filter((comment) => comment.author === parent.id)
+    }
+  },
+
+  Post: {
+    author(parent, args, ctx, info) {
+      return users.find((user) => user.id === parent.author)
+    },
+    comments(parent, args, ctx, info){
+      return comments.filter((comment) => comment.post === parent.id)
+    }
+  },
+
+  Comment: {
+    author(parent, args, ctx, info) {
+      return users.find((user) => user.id === parent.author)
+    },
+    post(parent, args, ctx, info){
+      return posts.find((post) => post.id === parent.post)
+    }
+  }
 } // resolvers
 
 const server = new GraphQLServer({
