@@ -67,7 +67,7 @@ const Mutation = {
   },
 
 
-  createPost(parent, args, {db}, info){
+  createPost(parent, args, {db, pubsub}, info){
     const userExists = db.users.some((user) => user.id === args.data.author)
     if(!userExists){
       throw new Error('User not found.')
@@ -77,36 +77,84 @@ const Mutation = {
       id: uuidv4(),
       ...args.data
     }
+
+    debugger;
     db.posts.push(post)
+    if(args.data.isPublished){
+      pubsub.publish('post', {
+        post: {
+          mutation: 'create',
+          data: post
+        }
+      })
+    }
     return post
   },
 
-  deletePost(parent, args, {db}, info){
+  deletePost(parent, args, {db, pubsub}, info){
     const postIndex = db.posts.findIndex((post) => post.id === args.id)
     if(postIndex === -1){
       return new Error("Post not found.")
     }
 
     const post = db.posts.splice(postIndex, 1)[0]
-    comments = comments.filter((comment) => comment.post !== args.id)
+    db.comments = db.comments.filter((comment) => comment.post !== args.id)
+
+    if(post.isPublished){
+      pubsub.publish('post', {
+        post: {
+          mutation: 'delete',
+          data: post
+        }
+      })
+    }
 
     return post
   },
 
-  updatePost(parents, args, {db}, info) {
+  updatePost(parents, args, {db, pubsub}, info) {
     const {id, data} = args;
     const post = db.posts.find((post) => post.id === id)
+    const originalPost = {...post}
 
     if(!post) {
       throw new Error('Post not found')
     }
 
-    if(data.title)
+    if(data.title){
       post.title = data.title
-    if(data.content)
+    }
+    if(data.content){
       post.content = data.content
-    if(data.isPublished !== undefined && data.isPublished !== null)
+    }
+    if(data.isPublished !== undefined && data.isPublished !== null){
       post.isPublished = data.isPublished
+
+      if(originalPost.isPublished && !post.isPublished){
+        pubsub.publish('post', {
+          post: {
+            mutation: 'delete',
+            data: originalPost
+          }
+        })
+      } else if(!originalPost.isPublished && post.originalPost){
+        pubsub.publish('post', {
+          post: {
+            mutation: 'create',
+            data: originalPost
+          }
+        })
+      }
+
+    } else if(post.isPublished) {
+      pubsub.publish('post', {
+        post: {
+          mutation: 'update',
+          data: originalPost
+        }
+      })
+    }
+
 
     return post
   },
@@ -125,7 +173,10 @@ const Mutation = {
       ...args.data
     }
     db.comments.push(comment)
-    pubsub.publish(`comment ${args.data.post}`, { comment })
+    pubsub.publish(`comment ${args.data.post}`, {
+      mutation: 'CREATE',
+      data: comment 
+    })
     return comment
   },
 
