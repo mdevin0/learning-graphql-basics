@@ -33,10 +33,39 @@ const Mutation = {
     })
     const user = db.users.splice(userIndex, 1)[0]
 
-
-
     return user
   },
+
+  updateUser(parent, args, {db}, info){
+    const {id, data} = args
+    const user = db.users.find((user) => user.id === id)
+
+    if(!user){
+      throw new Error("User not found.")
+    }
+
+    if(typeof data.email === 'string'){
+      const emailTaken = db.users.some((user) => user.email === data.email)
+
+      if (emailTaken){
+        throw new Error("Email is already taken")
+      }
+      user.email = data.email
+
+    }
+
+    if(typeof data.name === 'string') {
+      user.name = data.name
+    }
+
+    if(typeof data.age !== 'undefined'){ // GraphQL schema is already validating data type
+      user.age = data.age
+    }
+
+    return user
+
+  },
+
 
   createPost(parent, args, {db}, info){
     const userExists = db.users.some((user) => user.id === args.data.author)
@@ -64,6 +93,25 @@ const Mutation = {
     return post
   },
 
+  updatePost(parents, args, {db}, info) {
+    const {id, data} = args;
+    const post = db.posts.find((post) => post.id === id)
+
+    if(!post) {
+      throw new Error('Post not found')
+    }
+
+    if(data.title)
+      post.title = data.title
+    if(data.content)
+      post.content = data.content
+    if(data.isPublished !== undefined && data.isPublished !== null)
+      post.isPublished = data.isPublished
+
+    return post
+  },
+
+
   createComment(parent, args, {db}, info){
     const userExists = db.users.some((user) => user.id === args.data.author)
     const postExists = db.posts.some((post) => post.id === args.data.post && post.isPublished)
@@ -87,6 +135,21 @@ const Mutation = {
     }
 
     return db.comments.splice(commentIndex, 1)[0]
+
+  },
+
+  updateComment(parent, args, {db}, info){
+    const {id, data} = args
+    const comment = db.comments.find((comment) => comment.id === id)
+
+    if(!comment){
+      throw new Error("Comment not found")
+    }
+
+    if(typeof data.text === 'string')
+      comment.text = data.text
+
+    return comment
 
   }
 }
